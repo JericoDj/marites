@@ -60,7 +60,7 @@ class LlamaService {
         // Warning: This requires the library functions to be accessible in the isolate.
         // It's safest to look up the function within the isolate.
         final libDir = Platform.isAndroid ? 'libllama.so' : 
-                       (Platform.isWindows ? 'llama.dll' : 'libllama.dylib');
+                       (Platform.isWindows ? 'llama_wrapper.dll' : 'libllama.dylib');
                        
         final lib = DynamicLibrary.open(libDir);
         final initModelFunc = lib.lookupFunction<NativeInitModel, DartInitModel>('init_model');

@@ -32,5 +32,4 @@ target_include_directories(llama_wrapper PRIVATE
 # Under Windows, building a DLL requires resolving symbols
 target_link_libraries(llama_wrapper PRIVATE llama)
 
-# Set output name to llama.dll
-set_target_properties(llama_wrapper PROPERTIES OUTPUT_NAME "llama")
+# Keep the output name as llama_wrapper.dll to avoid collision with upstream llama.dll
