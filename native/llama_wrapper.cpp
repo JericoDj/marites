@@ -13,7 +13,7 @@ static std::mutex g_mutex;
 
 static int g_n_ctx = 2048;
 
-bool init_model(const char* model_path, int compute_device) {
+EXPORT bool init_model(const char* model_path, int compute_device) {
     std::lock_guard<std::mutex> lock(g_mutex);
     
     if (g_model != nullptr) {
@@ -53,7 +53,7 @@ bool init_model(const char* model_path, int compute_device) {
     return true;
 }
 
-const char* generate_text(const char* prompt) {
+EXPORT const char* generate_text(const char* prompt) {
     std::lock_guard<std::mutex> lock(g_mutex);
     
     if (!g_model || !g_ctx) {
@@ -133,7 +133,7 @@ const char* generate_text(const char* prompt) {
 #endif
 }
 
-void free_text(const char* text) {
+EXPORT void free_text(const char* text) {
     if (text) {
         free((void*)text);
     }
