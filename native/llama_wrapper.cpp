@@ -1,5 +1,6 @@
 #include "llama_wrapper.h"
 #include "llama.h"
+#include "ggml-backend.h"
 
 #include <string>
 #include <vector>
@@ -23,6 +24,8 @@ EXPORT bool init_model(const char* model_path, int compute_device) {
         g_model = nullptr;
     }
 
+    // Load backends explicitly for modern llama.cpp/ggml-backend
+    ggml_backend_load_all();
     llama_backend_init();
 
     llama_model_params model_params = llama_model_default_params();

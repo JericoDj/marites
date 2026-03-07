@@ -1,0 +1,45 @@
+Microsoft (R) COFF/PE Dumper Version 14.50.35721.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file llama_prebuilt\ggml.dll
+
+File Type: DLL
+
+  Section contains the following exports for ggml.dll
+
+    00000000 characteristics
+           0 time date stamp
+        0.00 version
+           1 ordinal base
+          16 number of functions
+          16 number of names
+
+    ordinal hint RVA      name
+
+          1    0 00001BF0 ggml_backend_dev_by_name
+          2    1 00001D30 ggml_backend_dev_by_type
+          3    2 00001A10 ggml_backend_dev_count
+          4    3 00001AA0 ggml_backend_dev_get
+          5    4 00001630 ggml_backend_device_register
+          6    5 00001F40 ggml_backend_init_best
+          7    6 00001E10 ggml_backend_init_by_name
+          8    7 00001E40 ggml_backend_init_by_type
+          9    8 00002190 ggml_backend_load
+         10    9 00002390 ggml_backend_load_all
+         11    A 000023A0 ggml_backend_load_all_from_path
+         12    B 000018D0 ggml_backend_reg_by_name
+         13    C 000016F0 ggml_backend_reg_count
+         14    D 00001780 ggml_backend_reg_get
+         15    E 00001590 ggml_backend_register
+         16    F 00002300 ggml_backend_unload
+
+  Summary
+
+        1000 .data
+        1000 .pdata
+        8000 .rdata
+        1000 .reloc
+        1000 .rsrc
+        E000 .text
+        1000 .tls
