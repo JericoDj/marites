@@ -75,7 +75,7 @@ class LlamaService {
   Future<String> generateText(String prompt) async {
     return await Isolate.run(() {
       final libDir = Platform.isAndroid ? 'libllama.so' : 
-                     (Platform.isWindows ? 'llama.dll' : 'libllama.dylib');
+                     (Platform.isWindows ? 'llama_wrapper.dll' : 'libllama.dylib');
                      
       final lib = DynamicLibrary.open(libDir);
       final generateTextFunc = lib.lookupFunction<NativeGenerateText, DartGenerateText>('generate_text');
