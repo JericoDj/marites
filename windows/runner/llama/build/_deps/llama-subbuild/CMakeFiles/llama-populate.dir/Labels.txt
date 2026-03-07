@@ -1,0 +1,14 @@
+# Target labels
+ llama-populate
+# Source files and their labels
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/CMakeFiles/llama-populate
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/CMakeFiles/llama-populate.rule
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/CMakeFiles/llama-populate-complete.rule
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-build.rule
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-configure.rule
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-download.rule
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-install.rule
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-mkdir.rule
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-patch.rule
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-test.rule
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-update.rule

@@ -1,0 +1,3 @@
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/CMakeFiles/llama-populate.dir
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/CMakeFiles/edit_cache.dir
+C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/CMakeFiles/rebuild_cache.dir

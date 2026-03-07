@@ -1,0 +1,126 @@
+#include "llama_wrapper.h"
+#include "llama.h"
+
+#include <string>
+#include <vector>
+#include <mutex>
+#include <iostream>
+#include <cstring>
+
+static llama_model* g_model = nullptr;
+static llama_context* g_ctx = nullptr;
+static std::mutex g_mutex;
+
+static int g_n_ctx = 2048;
+
+bool init_model(const char* model_path, int compute_device) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    
+    if (g_model != nullptr) {
+        llama_free(g_ctx);
+        llama_free_model(g_model);
+        g_ctx = nullptr;
+        g_model = nullptr;
+    }
+
+    llama_backend_init();
+
+    llama_model_params model_params = llama_model_default_params();
+    // 0 = CPU, 1 = GPU
+    if (compute_device == 0) {
+        model_params.n_gpu_layers = 0; // CPU only
+    } else {
+        model_params.n_gpu_layers = 99; // Offload as much as possible to GPU
+    }
+
+    g_model = llama_load_model_from_file(model_path, model_params);
+    if (!g_model) {
+        return false;
+    }
+
+    llama_context_params ctx_params = llama_context_default_params();
+    ctx_params.n_ctx = g_n_ctx;
+    ctx_params.n_threads = 4;
+    ctx_params.n_threads_batch = 4;
+
+    g_ctx = llama_new_context_with_model(g_model, ctx_params);
+    if (!g_ctx) {
+        llama_free_model(g_model);
+        g_model = nullptr;
+        return false;
+    }
+
+    return true;
+}
+
+const char* generate_text(const char* prompt) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    
+    if (!g_model || !g_ctx) {
+        return strdup("Error: Model not initialized.");
+    }
+
+    const int n_predict = 128; // Simple limit for demonstration
+    std::string prompt_str(prompt);
+
+    // Tokenize prompt
+    std::vector<llama_token> tokens_list;
+    tokens_list.resize(prompt_str.size() + 4);
+    int n_tokens = llama_tokenize(g_model, prompt_str.c_str(), prompt_str.length(), tokens_list.data(), tokens_list.size(), true, true);
+    if (n_tokens < 0) {
+        tokens_list.resize(-n_tokens);
+        n_tokens = llama_tokenize(g_model, prompt_str.c_str(), prompt_str.length(), tokens_list.data(), tokens_list.size(), true, true);
+    }
+    tokens_list.resize(n_tokens);
+
+    llama_batch batch = llama_batch_get_one(tokens_list.data(), n_tokens, 0, 0);
+    
+    if (llama_decode(g_ctx, batch) != 0) {
+        return strdup("Error: Failed to decode prompt.");
+    }
+
+    std::string response = "";
+    int n_cur = batch.n_tokens;
+    int n_decode = 0;
+    
+    // Sampling parameters
+    llama_sampler* smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
+    llama_sampler_chain_add_temp(smpl, 0.7f);
+    llama_sampler_chain_add_greedy(smpl);
+
+    while (n_cur <= g_n_ctx && n_decode < n_predict) {
+        llama_token id = llama_sampler_sample(smpl, g_ctx, -1);
+        llama_sampler_accept(smpl, id);
+
+        if (id == llama_token_eos(g_model)) {
+            break;
+        }
+
+        char buf[128];
+        int n = llama_token_to_piece(g_model, id, buf, sizeof(buf), 0, true);
+        if (n < 0) {
+            response += " [error] ";
+            break;
+        }
+        
+        response.append(buf, n);
+        
+        batch = llama_batch_get_one(&id, 1, n_cur, 0);
+        if (llama_decode(g_ctx, batch)) {
+            response += " [error decoding] ";
+            break;
+        }
+        n_cur += 1;
+        n_decode += 1;
+    }
+
+    llama_sampler_free(smpl);
+
+    return strdup(response.c_str());
+}
+
+void free_text(const char* text) {
+    if (text) {
+        free((void*)text);
+    }
+}

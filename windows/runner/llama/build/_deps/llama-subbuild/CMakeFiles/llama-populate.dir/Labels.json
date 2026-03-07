@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/CMakeFiles/llama-populate"
+		},
+		{
+			"file" : "C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/CMakeFiles/llama-populate.rule"
+		},
+		{
+			"file" : "C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/CMakeFiles/llama-populate-complete.rule"
+		},
+		{
+			"file" : "C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-build.rule"
+		},
+		{
+			"file" : "C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-configure.rule"
+		},
+		{
+			"file" : "C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-download.rule"
+		},
+		{
+			"file" : "C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-install.rule"
+		},
+		{
+			"file" : "C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-mkdir.rule"
+		},
+		{
+			"file" : "C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-patch.rule"
+		},
+		{
+			"file" : "C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-test.rule"
+		},
+		{
+			"file" : "C:/Users/dejes/StudioProjects/ ADA-AI-ASSISTANT/gemma_local_ai/windows/runner/llama/build/_deps/llama-subbuild/llama-populate-prefix/src/llama-populate-stamp/llama-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"llama-populate"
+		],
+		"name" : "llama-populate"
+	}
+}
