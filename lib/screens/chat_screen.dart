@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../ai/llama_service.dart';
+import 'package:provider/provider.dart';
+import '../providers/llama_provider.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -11,21 +12,12 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final _llamaService = LlamaService();
   final _promptController = TextEditingController();
   final _scrollController = ScrollController();
-  
-  // 0 = CPU, 1 = GPU/Metal/Vulkan
-  int _computeDevice = 0; 
-  bool _isInitializing = false;
-  bool _isGenerating = false;
-  bool _isModelLoaded = false;
   
   final SpeechToText _speechToText = SpeechToText();
   bool _speechEnabled = false;
   bool _isListening = false;
-  
-  final List<Map<String, String>> _messages = [];
 
   @override
   void initState() {
@@ -68,65 +60,20 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  Future<void> _initModel() async {
-    setState(() {
-      _isInitializing = true;
-    });
-
-    try {
-      final success = await _llamaService.initModel(computeDevice: _computeDevice);
-      if (success) {
-        setState(() {
-          _isModelLoaded = true;
-          _messages.add({'role': 'system', 'content': 'Model loaded successfully!'});
-        });
-      } else {
-        setState(() {
-          _messages.add({'role': 'system', 'content': 'Failed to load model. Please ensure the model file is placed correctly.'});
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _messages.add({'role': 'system', 'content': 'Error initializing model: $e'});
-      });
-    } finally {
-      setState(() {
-        _isInitializing = false;
-      });
-      _scrollToBottom();
-    }
-  }
-
-  Future<void> _generateResponse() async {
+  Future<void> _handleGenerateResponse() async {
     if (_isListening) {
       await _stopListening();
     }
     final prompt = _promptController.text.trim();
-    if (prompt.isEmpty || !_isModelLoaded) return;
+    if (prompt.isEmpty) return;
 
-    setState(() {
-      _messages.add({'role': 'user', 'content': prompt});
-      _isGenerating = true;
-    });
-    
     _promptController.clear();
-    _scrollToBottom();
-
-    try {
-      final response = await _llamaService.generateText(prompt);
-      setState(() {
-        _messages.add({'role': 'assistant', 'content': response});
-      });
-    } catch (e) {
-      setState(() {
-        _messages.add({'role': 'system', 'content': 'Error generating text: $e'});
-      });
-    } finally {
-      setState(() {
-        _isGenerating = false;
-      });
-      _scrollToBottom();
-    }
+    
+    // Call the provider to handle the prompt processing
+    await context.read<LlamaProvider>().generateResponse(
+      prompt,
+      onScrollRequested: _scrollToBottom,
+    );
   }
 
   void _scrollToBottom() {
@@ -143,6 +90,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch the provider for changes to UI state
+    final llamaProvider = context.watch<LlamaProvider>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gemma Local AI'),
@@ -151,20 +101,26 @@ class _ChatScreenState extends State<ChatScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               children: [
+                const Text('CLI Subprocess: '),
+                Switch(
+                  value: llamaProvider.useSubprocess,
+                  onChanged: (value) {
+                    llamaProvider.setUseSubprocess(value);
+                  },
+                ),
+                const SizedBox(width: 16.0),
                 const Text('Device: '),
                 DropdownButton<int>(
-                  value: _computeDevice,
+                  value: llamaProvider.computeDevice,
                   items: const [
                     DropdownMenuItem(value: 0, child: Text('CPU')),
                     DropdownMenuItem(value: 1, child: Text('GPU/Hardware')),
                   ],
-                  onChanged: _isModelLoaded || _isInitializing
+                  onChanged: llamaProvider.isModelLoaded || llamaProvider.isInitializing
                       ? null
                       : (value) {
                           if (value != null) {
-                            setState(() {
-                              _computeDevice = value;
-                            });
+                            llamaProvider.setComputeDevice(value);
                           }
                         },
                 ),
@@ -175,23 +131,25 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
-          if (!_isModelLoaded)
+          if (!llamaProvider.isModelLoaded)
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton(
-                onPressed: _isInitializing ? null : _initModel,
-                child: _isInitializing
+                onPressed: llamaProvider.isInitializing ? null : () {
+                  llamaProvider.pickAndInitModel().then((_) => _scrollToBottom());
+                },
+                child: llamaProvider.isInitializing
                     ? const CircularProgressIndicator()
-                    : const Text('Initialize Model'),
+                    : const Text('Select & Initialize Model'),
               ),
             ),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16.0),
-              itemCount: _messages.length,
+              itemCount: llamaProvider.messages.length,
               itemBuilder: (context, index) {
-                final message = _messages[index];
+                final message = llamaProvider.messages[index];
                 final isUser = message['role'] == 'user';
                 final isSystem = message['role'] == 'system';
                 
@@ -220,7 +178,7 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          if (_isGenerating)
+          if (llamaProvider.isGenerating)
             const Padding(
               padding: EdgeInsets.all(8.0),
               child: CircularProgressIndicator(),
@@ -236,8 +194,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       hintText: 'Enter your prompt...',
                       border: OutlineInputBorder(),
                     ),
-                    enabled: _isModelLoaded && !_isGenerating,
-                    onSubmitted: (_) => _generateResponse(),
+                    enabled: (llamaProvider.isModelLoaded || llamaProvider.useSubprocess) && !llamaProvider.isGenerating,
+                    onSubmitted: (_) => _handleGenerateResponse(),
                   ),
                 ),
                 const SizedBox(width: 8.0),
@@ -258,7 +216,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(width: 4.0),
                 IconButton(
                   icon: const Icon(Icons.send),
-                  onPressed: (_isModelLoaded && !_isGenerating) ? _generateResponse : null,
+                  onPressed: ((llamaProvider.isModelLoaded || llamaProvider.useSubprocess) && !llamaProvider.isGenerating) 
+                      ? _handleGenerateResponse 
+                      : null,
                   style: IconButton.styleFrom(foregroundColor: Colors.blue),
                 ),
               ],

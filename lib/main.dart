@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'screens/chat_screen.dart';
+import 'providers/llama_provider.dart';
 
 void main() {
-  runApp(const GemmaLocalApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LlamaProvider()),
+      ],
+      child: const GemmaLocalApp(),
+    ),
+  );
 }
 
 class GemmaLocalApp extends StatelessWidget {
