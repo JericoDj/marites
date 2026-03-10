@@ -10,12 +10,22 @@ import 'package:ffi/ffi.dart';
 // -----------------------------------------------------------------------------
 
 // bool init_model(const char* model_path, int compute_device);
-typedef NativeInitModel = Bool Function(Pointer<Utf8> modelPath, Int32 computeDevice);
-typedef DartInitModel = bool Function(Pointer<Utf8> modelPath, int computeDevice);
+typedef NativeInitModel =
+    Bool Function(Pointer<Utf8> modelPath, Int32 computeDevice);
+typedef DartInitModel =
+    bool Function(Pointer<Utf8> modelPath, int computeDevice);
 
 // void generate_text_stream(const char* prompt, token_callback callback);
-typedef NativeGenerateTextStream = Void Function(Pointer<Utf8> prompt, Pointer<NativeFunction<Void Function(Pointer<Utf8>)>> callback);
-typedef DartGenerateTextStream = void Function(Pointer<Utf8> prompt, Pointer<NativeFunction<Void Function(Pointer<Utf8>)>> callback);
+typedef NativeGenerateTextStream =
+    Void Function(
+      Pointer<Utf8> prompt,
+      Pointer<NativeFunction<Void Function(Pointer<Utf8>)>> callback,
+    );
+typedef DartGenerateTextStream =
+    void Function(
+      Pointer<Utf8> prompt,
+      Pointer<NativeFunction<Void Function(Pointer<Utf8>)>> callback,
+    );
 
 // -----------------------------------------------------------------------------
 // LlamaService
@@ -24,9 +34,10 @@ typedef DartGenerateTextStream = void Function(Pointer<Utf8> prompt, Pointer<Nat
 class LlamaService {
   LlamaService();
 
-
-
-  Future<bool> initModel({required int computeDevice, required String modelPath}) async {
+  Future<bool> initModel({
+    required int computeDevice,
+    required String modelPath,
+  }) async {
     final modelPathStr = modelPath;
     return await Isolate.run(() {
       final modelPathPtr = modelPathStr.toNativeUtf8();
@@ -35,16 +46,56 @@ class LlamaService {
           // On Android, the OS linker doesn't automatically load interdependent local libraries
           // if they aren't standard system libraries. Since llama.cpp builds ggml as separate .so files,
           // we must load them into the process memory first before libllama.so can link to them.
-          try { DynamicLibrary.open('libomp.so'); } catch (_) {}
-          try { DynamicLibrary.open('libggml-base.so'); } catch (_) {}
-          try { DynamicLibrary.open('libggml-cpu.so'); } catch (_) {}
-          try { DynamicLibrary.open('libggml.so'); } catch (_) {}
+          try {
+            DynamicLibrary.open('libomp.so');
+          } catch (_) {}
+          try {
+            DynamicLibrary.open('libggml-base.so');
+          } catch (_) {}
+          try {
+            DynamicLibrary.open('libggml-cpu.so');
+          } catch (_) {}
+          try {
+            DynamicLibrary.open('libggml.so');
+          } catch (_) {}
         }
-        
-        final libDir = Platform.isAndroid ? 'libllama_wrapper.so' : 
-                       (Platform.isWindows ? 'llama_wrapper.dll' : 'libllama.dylib');
+
+        String libDir = Platform.isAndroid
+            ? 'libllama_wrapper.so'
+            : (Platform.isWindows ? 'llama_wrapper.dll' : 'libllama.dylib');
+
+        if (Platform.isMacOS) {
+          final devBin = File(
+            '/Users/jericodejesus/projects/marites/macos/Runner/llama/build/bin',
+          ).absolute;
+          if (devBin.existsSync()) {
+            try {
+              DynamicLibrary.open('${devBin.path}/libggml-base.dylib');
+            } catch (_) {}
+            try {
+              DynamicLibrary.open('${devBin.path}/libggml-metal.dylib');
+            } catch (_) {}
+            try {
+              DynamicLibrary.open('${devBin.path}/libggml-cpu.dylib');
+            } catch (_) {}
+            try {
+              DynamicLibrary.open('${devBin.path}/libggml.dylib');
+            } catch (_) {}
+            try {
+              DynamicLibrary.open('${devBin.path}/libllama.dylib');
+            } catch (_) {}
+            final wrapperPath = File(
+              '/Users/jericodejesus/projects/marites/macos/Runner/llama/build/libllama.dylib',
+            ).absolute;
+            if (wrapperPath.existsSync()) {
+              libDir = wrapperPath.path;
+            }
+          }
+        }
+
         final lib = DynamicLibrary.open(libDir);
-        final initModelFunc = lib.lookupFunction<NativeInitModel, DartInitModel>('init_model');
+        final initModelFunc = lib
+            .lookupFunction<NativeInitModel, DartInitModel>('init_model');
         return initModelFunc(modelPathPtr, computeDevice);
       } finally {
         calloc.free(modelPathPtr);
@@ -54,16 +105,19 @@ class LlamaService {
 
   Stream<String> generateTextStream(String prompt) async* {
     final controller = StreamController<String>();
-    
+
     // Create the listener in the MAIN isolate so it can receive messages while background is blocked
-    final nativeCallback = NativeCallable<Void Function(Pointer<Utf8>)>.listener((Pointer<Utf8> tokenPtr) {
-      if (!controller.isClosed) {
-        controller.add(tokenPtr.toDartString());
-      }
-    });
+    final nativeCallback =
+        NativeCallable<Void Function(Pointer<Utf8>)>.listener((
+          Pointer<Utf8> tokenPtr,
+        ) {
+          if (!controller.isClosed) {
+            controller.add(tokenPtr.toDartString());
+          }
+        });
 
     final exitPort = ReceivePort();
-    
+
     // Spawn the worker isolate
     await Isolate.spawn(_inferenceIsolate, {
       'prompt': prompt,
@@ -81,7 +135,8 @@ class LlamaService {
     });
 
     yield* controller.stream;
-    await completer.future; // Ensure we keep the steam alive until background finishes
+    await completer
+        .future; // Ensure we keep the steam alive until background finishes
   }
 
   static void _inferenceIsolate(Map<String, dynamic> args) {
@@ -90,15 +145,52 @@ class LlamaService {
     final SendPort exitPort = args['exitPort'];
 
     try {
-      final libDir = Platform.isAndroid ? 'libllama_wrapper.so' : 
-                     (Platform.isWindows ? 'llama_wrapper.dll' : 'libllama.dylib');
+      String libDir = Platform.isAndroid
+          ? 'libllama_wrapper.so'
+          : (Platform.isWindows ? 'llama_wrapper.dll' : 'libllama.dylib');
+
+      if (Platform.isMacOS) {
+        final devBin = File(
+          '/Users/jericodejesus/projects/marites/macos/Runner/llama/build/bin',
+        ).absolute;
+        if (devBin.existsSync()) {
+          try {
+            DynamicLibrary.open('${devBin.path}/libggml-base.dylib');
+          } catch (_) {}
+          try {
+            DynamicLibrary.open('${devBin.path}/libggml-metal.dylib');
+          } catch (_) {}
+          try {
+            DynamicLibrary.open('${devBin.path}/libggml-cpu.dylib');
+          } catch (_) {}
+          try {
+            DynamicLibrary.open('${devBin.path}/libggml.dylib');
+          } catch (_) {}
+          try {
+            DynamicLibrary.open('${devBin.path}/libllama.dylib');
+          } catch (_) {}
+          final wrapperPath = File(
+            '/Users/jericodejesus/projects/marites/macos/Runner/llama/build/libllama.dylib',
+          ).absolute;
+          if (wrapperPath.existsSync()) {
+            libDir = wrapperPath.path;
+          }
+        }
+      }
+
       final lib = DynamicLibrary.open(libDir);
-      
-      final streamFunc = lib.lookupFunction<NativeGenerateTextStream, DartGenerateTextStream>('generate_text_stream');
-      
+
+      final streamFunc = lib
+          .lookupFunction<NativeGenerateTextStream, DartGenerateTextStream>(
+            'generate_text_stream',
+          );
+
       final promptPtr = prompt.toNativeUtf8();
 
-      final callbackPtr = Pointer<NativeFunction<Void Function(Pointer<Utf8>)>>.fromAddress(callbackAddr);
+      final callbackPtr =
+          Pointer<NativeFunction<Void Function(Pointer<Utf8>)>>.fromAddress(
+            callbackAddr,
+          );
 
       streamFunc(promptPtr, callbackPtr);
       calloc.free(promptPtr);
@@ -122,36 +214,42 @@ class LlamaService {
   Process? _subprocess;
   StreamController<String>? _subprocessController;
   Completer<bool>? _initCompleter;
+  final StringBuffer _responseBuffer = StringBuffer();
 
   Future<bool> initSubprocessModel({required String modelPath}) async {
     if (_subprocess != null) return true;
     _initCompleter = Completer<bool>();
-    
+
     try {
-      
       String cliPath = '';
       if (Platform.isWindows) {
-        cliPath = r'C:\Users\dejes\StudioProjects\ ADA-AI-ASSISTANT\gemma_local_ai\llama_prebuilt\llama-cli.exe';
+        cliPath =
+            r'C:\Users\dejes\StudioProjects\ ADA-AI-ASSISTANT\gemma_local_ai\llama_prebuilt\llama-cli.exe';
       } else if (Platform.isAndroid) {
-         // This assumes the cli is placed alongside the lib in the app directory, or we ship a compiled binary.
-         // Realistically Android requires JNI/FFI, but we will put a placeholder.
-        cliPath = '/data/local/tmp/llama-cli'; 
+        // This assumes the cli is placed alongside the lib in the app directory, or we ship a compiled binary.
+        // Realistically Android requires JNI/FFI, but we will put a placeholder.
+        cliPath = '/data/local/tmp/llama-cli';
       } else if (Platform.isIOS || Platform.isMacOS) {
-        cliPath = 'llama-cli'; 
+        cliPath = 'llama-cli';
+        if (Platform.isMacOS) {
+          final devCli = File(
+            '/Users/jericodejesus/projects/marites/macos/Runner/llama/build/bin/llama-cli',
+          ).absolute;
+          if (devCli.existsSync()) {
+            cliPath = devCli.path;
+          }
+        }
       }
-      
-      _subprocess = await Process.start(
-        cliPath,
-        [
-          '-m', modelPath,
-          '-cnv', // Use conversational mode for persistent keeping alive
-          '-t', '8',
-          '-c', '2048',
-          '-n', '256', // Optional max tokens per turn
-          '--no-display-prompt',
-          '--log-disable',
-        ],
-      );
+
+      _subprocess = await Process.start(cliPath, [
+        '-m', modelPath,
+        '-cnv', // Use conversational mode for persistent keeping alive
+        '-t', '8',
+        '-c', '2048',
+        '-n', '10000', // Optional max tokens per turn
+        '--no-display-prompt',
+        '--log-disable',
+      ]);
 
       _subprocess!.stdout.transform(utf8.decoder).listen((text) {
         // Initial setup wait for the prompt "> " marker
@@ -167,18 +265,52 @@ class LlamaService {
           String chunk = text;
           bool isDone = false;
 
-          // Process termination chunk 
+          // Strip ANSI escape codes and terminal control characters
+          chunk = chunk.replaceAll(RegExp(r'\x1B\[[0-9;]*[a-zA-Z]'), '');
+          chunk = chunk.replaceAll(RegExp(r'\x1B\].*?\x07'), '');
+          chunk = chunk.replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]'), '');
+
+          // Strip the echoed prompt from the beginning of the response
+          if (_currentPrompt != null && chunk.contains(_currentPrompt!)) {
+            chunk = chunk.substring(
+              chunk.indexOf(_currentPrompt!) + _currentPrompt!.length,
+            );
+            _currentPrompt = null; // Only strip once
+          }
+
+          // Process termination chunk
           if (chunk.contains('> ')) {
             isDone = true;
             chunk = chunk.replaceAll(RegExp(r'\[\s*Prompt:.*?\]'), '');
             chunk = chunk.replaceAll('> ', '');
           }
 
+          // Trim leading newlines from the cleaned chunk
+          if (_currentPrompt == null) {
+            chunk = chunk.replaceFirst(RegExp(r'^\n+'), '');
+          }
+
           if (chunk.isNotEmpty) {
+            _responseBuffer.write(chunk);
             _subprocessController!.add(chunk);
           }
 
           if (isDone) {
+            // Detect and print JSON from the complete response
+            final fullResponse = _responseBuffer.toString();
+            final jsonPattern = RegExp(r'[\{\[][\s\S]*[\}\]]');
+            final jsonMatch = jsonPattern.firstMatch(fullResponse);
+            if (jsonMatch != null) {
+              try {
+                final parsed = json.decode(jsonMatch.group(0)!);
+                print(
+                  '[JSON DETECTED] ${const JsonEncoder.withIndent('  ').convert(parsed)}',
+                );
+              } catch (_) {
+                // Not valid JSON
+              }
+            }
+            _responseBuffer.clear();
             _subprocessController!.close();
             _subprocessController = null;
           }
@@ -200,13 +332,18 @@ class LlamaService {
     }
   }
 
+  String? _currentPrompt;
+
   Stream<String> generateTextSubprocessStream(String prompt) {
     if (_subprocess == null) {
-      throw Exception('Subprocess not initialized. Call initSubprocessModel first.');
+      throw Exception(
+        'Subprocess not initialized. Call initSubprocessModel first.',
+      );
     }
-    
+
     _subprocessController = StreamController<String>();
-    
+    _currentPrompt = prompt;
+
     // In -cnv mode, sending the prompt followed by newline triggers generation
     _subprocess!.stdin.writeln(prompt);
 

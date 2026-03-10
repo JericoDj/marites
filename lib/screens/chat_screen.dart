@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +16,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _promptController = TextEditingController();
   final _scrollController = ScrollController();
-  
+
   final SpeechToText _speechToText = SpeechToText();
   bool _speechEnabled = false;
   bool _isListening = false;
@@ -22,15 +24,27 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _initSpeech();
+    // macOS has TCC sandbox quirks with SpeechToText that crash the app on startup
+    // Initialize on startup for other platforms, but delay for macOS
+    if (!Platform.isMacOS) {
+      _initSpeech();
+    }
   }
 
   Future<void> _initSpeech() async {
-    _speechEnabled = await _speechToText.initialize();
-    setState(() {});
+    try {
+      _speechEnabled = await _speechToText.initialize();
+      setState(() {});
+    } catch (e) {
+      print('Speech init error: $e');
+    }
   }
 
   Future<void> _startListening() async {
+    if (Platform.isMacOS && !_speechEnabled) {
+      await _initSpeech();
+    }
+
     var status = await Permission.microphone.request();
     if (status.isGranted) {
       await _speechToText.listen(
@@ -68,7 +82,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (prompt.isEmpty) return;
 
     _promptController.clear();
-    
+
     // Call the provider to handle the prompt processing
     await context.read<LlamaProvider>().generateResponse(
       prompt,
@@ -116,7 +130,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     DropdownMenuItem(value: 0, child: Text('CPU')),
                     DropdownMenuItem(value: 1, child: Text('GPU/Hardware')),
                   ],
-                  onChanged: llamaProvider.isModelLoaded || llamaProvider.isInitializing
+                  onChanged:
+                      llamaProvider.isModelLoaded ||
+                          llamaProvider.isInitializing
                       ? null
                       : (value) {
                           if (value != null) {
@@ -135,9 +151,13 @@ class _ChatScreenState extends State<ChatScreen> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton(
-                onPressed: llamaProvider.isInitializing ? null : () {
-                  llamaProvider.pickAndInitModel().then((_) => _scrollToBottom());
-                },
+                onPressed: llamaProvider.isInitializing
+                    ? null
+                    : () {
+                        llamaProvider.pickAndInitModel().then(
+                          (_) => _scrollToBottom(),
+                        );
+                      },
                 child: llamaProvider.isInitializing
                     ? const CircularProgressIndicator()
                     : const Text('Select & Initialize Model'),
@@ -152,24 +172,26 @@ class _ChatScreenState extends State<ChatScreen> {
                 final message = llamaProvider.messages[index];
                 final isUser = message['role'] == 'user';
                 final isSystem = message['role'] == 'system';
-                
+
                 return Align(
-                  alignment: isSystem 
-                      ? Alignment.center 
+                  alignment: isSystem
+                      ? Alignment.center
                       : (isUser ? Alignment.centerRight : Alignment.centerLeft),
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 4.0),
                     padding: const EdgeInsets.all(12.0),
                     decoration: BoxDecoration(
-                      color: isSystem 
-                          ? Colors.grey.withOpacity(0.2) 
+                      color: isSystem
+                          ? Colors.grey.withOpacity(0.2)
                           : (isUser ? Colors.blue : Colors.deepPurple),
                       borderRadius: BorderRadius.circular(16.0),
                     ),
-                    child: Text(
+                    child: SelectableText(
                       message['content'] ?? '',
                       style: TextStyle(
-                        fontStyle: isSystem ? FontStyle.italic : FontStyle.normal,
+                        fontStyle: isSystem
+                            ? FontStyle.italic
+                            : FontStyle.normal,
                         color: Colors.white,
                       ),
                     ),
@@ -188,14 +210,31 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _promptController,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter your prompt...',
-                      border: OutlineInputBorder(),
+                  child: RawKeyboardListener(
+                    focusNode: FocusNode(),
+                    onKey: (event) {
+                      if (event is RawKeyDownEvent &&
+                          event.logicalKey == LogicalKeyboardKey.enter &&
+                          !event.isShiftPressed) {
+                        // Enter without Shift sends the message
+                        _handleGenerateResponse();
+                      }
+                    },
+                    child: TextField(
+                      controller: _promptController,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter your prompt...',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 5,
+                      minLines: 1,
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.newline,
+                      enabled:
+                          (llamaProvider.isModelLoaded ||
+                              llamaProvider.useSubprocess) &&
+                          !llamaProvider.isGenerating,
                     ),
-                    enabled: (llamaProvider.isModelLoaded || llamaProvider.useSubprocess) && !llamaProvider.isGenerating,
-                    onSubmitted: (_) => _handleGenerateResponse(),
                   ),
                 ),
                 const SizedBox(width: 8.0),
@@ -216,8 +255,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(width: 4.0),
                 IconButton(
                   icon: const Icon(Icons.send),
-                  onPressed: ((llamaProvider.isModelLoaded || llamaProvider.useSubprocess) && !llamaProvider.isGenerating) 
-                      ? _handleGenerateResponse 
+                  onPressed:
+                      ((llamaProvider.isModelLoaded ||
+                              llamaProvider.useSubprocess) &&
+                          !llamaProvider.isGenerating)
+                      ? _handleGenerateResponse
                       : null,
                   style: IconButton.styleFrom(foregroundColor: Colors.blue),
                 ),

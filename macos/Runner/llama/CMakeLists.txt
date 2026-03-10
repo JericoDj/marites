@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 project(llama_macos)
 
 # Set up macOS architecture (Apple Silicon support)
-set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+set(CMAKE_OSX_ARCHITECTURES "arm64")
 
 # Enable Metal for Apple Silicon
 set(GGML_USE_METAL ON)
@@ -17,8 +17,11 @@ FetchContent_Declare(
 )
 
 set(LLAMA_BUILD_TESTS OFF CACHE BOOL "Disable tests" FORCE)
-set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "Disable examples" FORCE)
-set(LLAMA_BUILD_SERVER OFF CACHE BOOL "Disable server" FORCE)
+set(LLAMA_BUILD_COMMON ON CACHE BOOL "Enable common" FORCE)
+set(LLAMA_BUILD_TOOLS ON CACHE BOOL "Enable tools" FORCE)
+set(LLAMA_BUILD_EXAMPLES ON CACHE BOOL "Enable examples" FORCE)
+set(LLAMA_BUILD_SERVER ON CACHE BOOL "Enable server" FORCE)
+set(LLAMA_CURL OFF CACHE BOOL "Disable cURL" FORCE)
 
 FetchContent_MakeAvailable(llama)
 
