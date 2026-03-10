@@ -35,4 +35,8 @@ target_link_libraries(llama_wrapper
 )
 
 # Rename to libllama.so to match Dart FFI expectation
-set_target_properties(llama_wrapper PROPERTIES OUTPUT_NAME "llama")
+set_target_properties(llama_wrapper PROPERTIES 
+    C_VISIBILITY_PRESET default
+    CXX_VISIBILITY_PRESET default
+    VISIBILITY_INLINES_HIDDEN OFF
+)

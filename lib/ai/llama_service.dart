@@ -96,8 +96,7 @@ class LlamaService {
       
       final streamFunc = lib.lookupFunction<NativeGenerateTextStream, DartGenerateTextStream>('generate_text_stream');
       
-      final formattedPrompt = "<start_of_turn>user\n$prompt<end_of_turn>\n<start_of_turn>model\n";
-      final promptPtr = formattedPrompt.toNativeUtf8();
+      final promptPtr = prompt.toNativeUtf8();
 
       final callbackPtr = Pointer<NativeFunction<Void Function(Pointer<Utf8>)>>.fromAddress(callbackAddr);
 

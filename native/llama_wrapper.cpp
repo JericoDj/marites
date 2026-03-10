@@ -7,6 +7,7 @@
 #include <mutex>
 #include <iostream>
 #include <cstring>
+#include <thread>
 
 static llama_model* g_model = nullptr;
 static llama_context* g_ctx = nullptr;
@@ -43,8 +44,11 @@ EXPORT bool init_model(const char* model_path, int compute_device) {
 
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = g_n_ctx;
-    ctx_params.n_threads = 8;
-    ctx_params.n_threads_batch = 8;
+    
+    // Automatically detect and use all available CPU cores to max out phone power
+    unsigned int max_threads = std::thread::hardware_concurrency();
+    ctx_params.n_threads = max_threads > 0 ? max_threads : 8;
+    ctx_params.n_threads_batch = ctx_params.n_threads;
 
     g_ctx = llama_init_from_model(g_model, ctx_params);
     if (!g_ctx) {
